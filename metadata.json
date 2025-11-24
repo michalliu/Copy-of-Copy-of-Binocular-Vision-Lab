@@ -1,0 +1,5 @@
+{
+  "name": "Copy of Copy of Binocular Vision Lab",
+  "description": "An interactive 3D simulation of binocular stereo vision. Adjust interpupillary distance, focal length, and convergence to understand depth perception, powered by Gemini AI for optical analysis.",
+  "requestFramePermissions": []
+}
