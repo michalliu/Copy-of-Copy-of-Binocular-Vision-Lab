@@ -160,10 +160,9 @@ const SceneContent = ({
       meshRef.current.rotation.y += delta * 0.2;
       meshRef.current.rotation.x += delta * 0.1;
       
-      if (!isGodView) {
-         meshRef.current.position.y = Math.sin(meshRef.current.rotation.y * 4) * 0.1; 
-         meshRef.current.rotation.z = Math.sin(meshRef.current.rotation.y * 3) * 0.05;
-      }
+      // Removed !isGodView check so object animates in God View too
+      meshRef.current.position.y = Math.sin(meshRef.current.rotation.y * 4) * 0.1; 
+      meshRef.current.rotation.z = Math.sin(meshRef.current.rotation.y * 3) * 0.05;
     }
   });
 
@@ -178,20 +177,10 @@ const SceneContent = ({
 
   const handleDragEnd = () => {
     if (meshRef.current && onParamChange) {
-      // Calculate new distance based on how much the object was moved along Z
-      // Original setup: Camera at Z = targetDistance, Object at Z = 0
-      // If object moves to Z = z', new relative distance is targetDistance - z'
       const zOffset = meshRef.current.position.z;
-      
       const newDistance = Math.max(0.5, params.targetDistance - zOffset);
-      
-      // Reset object to zero and update the simulation parameter
-      // The camera will effectively "move" to maintain the new distance relative to the object center
       meshRef.current.position.set(0, 0, 0); 
-      
-      onParamChange({ 
-        targetDistance: newDistance 
-      });
+      onParamChange({ targetDistance: newDistance });
     }
   };
 
@@ -311,7 +300,7 @@ const SceneContent = ({
   );
 };
 
-// Component to visualize the dynamic camera Frustum
+// Optimized Camera Frustum Component
 const CameraFrustum = ({ fov, distance, color, opacity = 0.2 }: { fov: number, distance: number, color: string, opacity?: number }) => {
   // Calculate frustum dimensions based on FOV and distance
   // h = tan(fov/2) * dist
@@ -330,76 +319,90 @@ const CameraFrustum = ({ fov, distance, color, opacity = 0.2 }: { fov: number, d
     ];
   }, [halfH, halfW, distance]);
 
+  // Precise Frustum Geometry matching the rectangular aspect ratio
+  const volumeGeometry = useMemo(() => {
+    const geom = new THREE.BufferGeometry();
+    const vertices: number[] = [];
+    
+    // Tip coordinates
+    const t = [0, 0, 0];
+    // Corner coordinates
+    const tl = [-halfW, halfH, -distance];
+    const tr = [halfW, halfH, -distance];
+    const bl = [-halfW, -halfH, -distance];
+    const br = [halfW, -halfH, -distance];
+
+    // Push triangles (Counter-clockwise winding for front facing)
+    // Top Face: Tip -> TL -> TR
+    vertices.push(...t, ...tl, ...tr);
+    // Right Face: Tip -> TR -> BR
+    vertices.push(...t, ...tr, ...br);
+    // Bottom Face: Tip -> BR -> BL
+    vertices.push(...t, ...br, ...bl);
+    // Left Face: Tip -> BL -> TL
+    vertices.push(...t, ...bl, ...tl);
+    
+    // Far Cap (Rectangle) - Two triangles
+    // TL -> BL -> BR
+    vertices.push(...tl, ...bl, ...br);
+    // TL -> BR -> TR
+    vertices.push(...tl, ...br, ...tr);
+
+    geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geom.computeVertexNormals();
+    return geom;
+  }, [halfW, halfH, distance]);
+
   return (
     <group>
       {/* Edges */}
-      <Line points={[points[0], points[1]]} color={color} transparent opacity={0.5} />
-      <Line points={[points[0], points[2]]} color={color} transparent opacity={0.5} />
-      <Line points={[points[0], points[3]]} color={color} transparent opacity={0.5} />
-      <Line points={[points[0], points[4]]} color={color} transparent opacity={0.5} />
+      <Line points={[points[0], points[1]]} color={color} transparent opacity={0.6} />
+      <Line points={[points[0], points[2]]} color={color} transparent opacity={0.6} />
+      <Line points={[points[0], points[3]]} color={color} transparent opacity={0.6} />
+      <Line points={[points[0], points[4]]} color={color} transparent opacity={0.6} />
       
-      {/* Far Plane Rect (Image Plane/Sensor) */}
-      <Line points={[points[1], points[2], points[3], points[4], points[1]]} color={color} transparent opacity={0.8} lineWidth={2} />
+      {/* Far Plane Rect (The "View Plane") */}
+      <Line points={[points[1], points[2], points[3], points[4], points[1]]} color={color} transparent opacity={0.9} lineWidth={1.5} />
 
-      {/* Sensor/Retina Plane Simulation - Visualizing the "Screen" */}
-      <mesh position={[0, 0, -distance]} rotation={[0,0,0]}>
-         <planeGeometry args={[halfW * 2, halfH * 2]} />
-         <meshBasicMaterial 
-            color={color} 
-            transparent 
-            opacity={0.1} 
-            side={THREE.DoubleSide} 
-            depthWrite={false}
-         />
-         <Grid 
-            args={[halfW * 2, halfH * 2]} 
-            cellSize={halfW / 2} 
-            cellThickness={1} 
-            cellColor={color} 
-            sectionSize={halfW}
-            sectionThickness={1.5}
-            sectionColor={color}
-            fadeDistance={20}
-            position={[0, 0, 0.01]}
-            rotation={[Math.PI / 2, 0, 0]} 
-          />
-      </mesh>
-      
-      {/* Sight Ray: Visualizing the light ray from object center to camera center */}
-      {/* The object is at world 0,0,0. The camera is rotated to face it. 
-          So in Camera local space, the object is at (0, 0, -dist) relative to camera.
-      */}
+      {/* Crosshair at center of View Plane */}
+      <Line points={[[0, halfH * 0.2, -distance], [0, -halfH * 0.2, -distance]]} color={color} transparent opacity={0.4} />
+      <Line points={[[-halfH * 0.2, 0, -distance], [halfH * 0.2, 0, -distance]]} color={color} transparent opacity={0.4} />
+
+      {/* Optical Axis Ray */}
       <Line 
         points={[[0, 0, 0], [0, 0, -distance]]} 
         color={color} 
-        lineWidth={2} 
+        lineWidth={1} 
         transparent 
-        opacity={0.6} 
+        opacity={0.8} 
         dashed 
-        dashScale={2}
+        dashScale={5}
       />
       
-      {/* Text Label for Retina/Sensor */}
-      <Text 
-        position={[halfW, -halfH, -distance]} 
-        color={color} 
-        fontSize={0.2} 
-        anchorX="left" 
-        anchorY="top"
-        fillOpacity={0.8}
-      >
-        成像平面
-      </Text>
+      {/* View Plane Info Label */}
+      <group position={[halfW, -halfH - 0.2, -distance]}>
+        <Text 
+          color={color} 
+          fontSize={0.25} 
+          anchorX="right" 
+          anchorY="top"
+          fillOpacity={0.9}
+          outlineWidth={0.02}
+          outlineColor="black"
+        >
+          {`视野平面\n${(halfW * 2).toFixed(1)}m × ${(halfH * 2).toFixed(1)}m`}
+        </Text>
+      </group>
 
-      {/* Transparent Volume */}
-      <mesh position={[0, 0, -distance/2]} rotation={[Math.PI/2, 0, 0]}>
-         <coneGeometry args={[Math.max(halfW, halfH), distance, 4, 1, true]} />
+      {/* Volumetric Beam (Additive Blending for light-like effect) */}
+      <mesh geometry={volumeGeometry}>
          <meshBasicMaterial 
             color={color} 
             transparent 
-            opacity={opacity * 0.3} 
+            opacity={opacity} 
             side={THREE.DoubleSide} 
             depthWrite={false}
+            blending={THREE.AdditiveBlending}
          />
       </mesh>
     </group>
@@ -461,7 +464,7 @@ const CameraVisualizer = ({ params }: { params: SimulationParams }) => {
       {/* Show FOV Frustum if enabled */}
       {params.showFOV ? (
         <group position={[0, 0, -0.7 * scale]}> {/* Start from lens position approximately */}
-           <CameraFrustum fov={fov} distance={frustumDist} color={color} />
+           <CameraFrustum fov={fov} distance={frustumDist} color={color} opacity={0.15} />
         </group>
       ) : (
         /* Fallback legacy line */
@@ -679,7 +682,7 @@ export const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ params, view
           <SceneContent 
             params={params} 
             isGodView={true} 
-            onParamChange={(updates) => setParams(p => ({ ...p, ...updates }))}
+            onParamChange={(updates) => setParams((prev) => ({ ...prev, ...updates }))}
           />
           <CameraVisualizer params={params} />
           <ambientLight intensity={0.5} />

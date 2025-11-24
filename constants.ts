@@ -17,7 +17,7 @@ export const DEFAULT_PARAMS = {
 };
 
 export const MIN_IPD = 0; // Cyclops!
-export const MAX_IPD = 2000; // Hammerhead shark simulation
+export const MAX_IPD = 20000; // Hammerhead shark simulation
 export const MIN_DISTANCE = 0.5;
 export const MAX_DISTANCE = 10.0;
 
