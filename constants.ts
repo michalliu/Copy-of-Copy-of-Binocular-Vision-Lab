@@ -8,6 +8,7 @@ export const DEFAULT_PARAMS = {
   cameraSize: 0.15,
   objectScale: 0.5,
   isPaused: false,
+  isViewLocked: false,
   showBoundingBox: false,
   showBackgroundBoundingBox: false,
   showCameraBoundingBox: false,

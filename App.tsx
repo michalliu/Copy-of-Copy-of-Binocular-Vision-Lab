@@ -85,7 +85,7 @@ const App: React.FC = () => {
 
           {/* Center: 3D Simulation (7 cols) */}
           <div className="col-span-12 lg:col-span-6 xl:col-span-7 h-full flex flex-col">
-            <SimulationCanvas params={params} viewMode={viewMode} />
+            <SimulationCanvas params={params} viewMode={viewMode} setParams={setParams} />
             
             {/* Legend / Status Bar underneath canvas */}
             <div className="mt-3 flex justify-between items-center text-xs text-slate-500 px-2">

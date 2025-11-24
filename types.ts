@@ -8,6 +8,7 @@ export interface SimulationParams {
   cameraSize: number; // Visual size of the camera models in God View
   objectScale: number; // Scale of the target object
   isPaused: boolean; // Pause rotation
+  isViewLocked: boolean; // Toggle for locking view to drag object
   showBoundingBox: boolean; // Toggle target bounding box
   showBackgroundBoundingBox: boolean; // Toggle background bounding box
   showCameraBoundingBox: boolean; // Toggle camera bounding box

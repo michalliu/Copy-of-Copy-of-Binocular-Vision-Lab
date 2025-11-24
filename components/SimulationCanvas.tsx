@@ -338,16 +338,61 @@ const CameraFrustum = ({ fov, distance, color, opacity = 0.2 }: { fov: number, d
       <Line points={[points[0], points[3]]} color={color} transparent opacity={0.5} />
       <Line points={[points[0], points[4]]} color={color} transparent opacity={0.5} />
       
-      {/* Far Plane Rect */}
-      <Line points={[points[1], points[2], points[3], points[4], points[1]]} color={color} transparent opacity={0.5} />
+      {/* Far Plane Rect (Image Plane/Sensor) */}
+      <Line points={[points[1], points[2], points[3], points[4], points[1]]} color={color} transparent opacity={0.8} lineWidth={2} />
+
+      {/* Sensor/Retina Plane Simulation - Visualizing the "Screen" */}
+      <mesh position={[0, 0, -distance]} rotation={[0,0,0]}>
+         <planeGeometry args={[halfW * 2, halfH * 2]} />
+         <meshBasicMaterial 
+            color={color} 
+            transparent 
+            opacity={0.1} 
+            side={THREE.DoubleSide} 
+            depthWrite={false}
+         />
+         <Grid 
+            args={[halfW * 2, halfH * 2]} 
+            cellSize={halfW / 2} 
+            cellThickness={1} 
+            cellColor={color} 
+            sectionSize={halfW}
+            sectionThickness={1.5}
+            sectionColor={color}
+            fadeDistance={20}
+            position={[0, 0, 0.01]}
+            rotation={[Math.PI / 2, 0, 0]} 
+          />
+      </mesh>
+      
+      {/* Sight Ray: Visualizing the light ray from object center to camera center */}
+      {/* The object is at world 0,0,0. The camera is rotated to face it. 
+          So in Camera local space, the object is at (0, 0, -dist) relative to camera.
+      */}
+      <Line 
+        points={[[0, 0, 0], [0, 0, -distance]]} 
+        color={color} 
+        lineWidth={2} 
+        transparent 
+        opacity={0.6} 
+        dashed 
+        dashScale={2}
+      />
+      
+      {/* Text Label for Retina/Sensor */}
+      <Text 
+        position={[halfW, -halfH, -distance]} 
+        color={color} 
+        fontSize={0.2} 
+        anchorX="left" 
+        anchorY="top"
+        fillOpacity={0.8}
+      >
+        成像平面
+      </Text>
 
       {/* Transparent Volume */}
-      <mesh position={[0, 0, -distance/2]} scale={[1,1,1]}>
-        {/* We can construct a simple cone/pyramid geometry or just imply it. 
-            For better visual, let's create a custom geometry or just use the lines for clarity 
-            to avoid z-fighting with objects. 
-            Using a Cone scaled to match the pyramid is an approximation. 
-        */}
+      <mesh position={[0, 0, -distance/2]} rotation={[Math.PI/2, 0, 0]}>
          <coneGeometry args={[Math.max(halfW, halfH), distance, 4, 1, true]} />
          <meshBasicMaterial 
             color={color} 
@@ -355,7 +400,6 @@ const CameraFrustum = ({ fov, distance, color, opacity = 0.2 }: { fov: number, d
             opacity={opacity * 0.3} 
             side={THREE.DoubleSide} 
             depthWrite={false}
-            // Rotate the cone to align corners if needed, or just circle cone
          />
       </mesh>
     </group>
@@ -379,8 +423,8 @@ const CameraVisualizer = ({ params }: { params: SimulationParams }) => {
     return (fovRadians * 180) / Math.PI;
   }, [params.focalLength]);
 
-  // Visual distance for the frustum cone
-  const frustumDist = params.targetDistance + 3;
+  // Visual distance for the frustum cone - set to target distance to show convergence plane
+  const frustumDist = params.targetDistance;
 
   const CameraMesh = ({ color, pos, rot, label }: { color: string, pos: [number, number, number], rot: [number, number, number], label: string }) => (
     <group position={pos} rotation={rot}>

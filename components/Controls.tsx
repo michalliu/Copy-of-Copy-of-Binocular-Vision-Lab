@@ -21,7 +21,8 @@ const Slider = ({
   unit, 
   onChange,
   tooltipTitle,
-  tooltipContent
+  tooltipContent,
+  extraInfo
 }: { 
   label: string; 
   value: number; 
@@ -32,6 +33,7 @@ const Slider = ({
   onChange: (val: number) => void; 
   tooltipTitle?: string;
   tooltipContent?: string;
+  extraInfo?: string;
 }) => (
   <div className="mb-4">
     <div className="flex justify-between text-sm text-slate-400 mb-1 items-center">
@@ -49,6 +51,7 @@ const Slider = ({
         )}
       </div>
       <div className="flex items-center gap-2">
+        {extraInfo && <span className="text-[10px] text-indigo-400 font-mono mr-1">{extraInfo}</span>}
         <input
           type="number"
           min={min}
@@ -100,6 +103,11 @@ export const Controls: React.FC<ControlsProps> = ({
     }
   };
 
+  // Calculate Approx Horizontal FOV for display
+  // Using 35mm full frame sensor width (36mm)
+  // FOV = 2 * atan(36 / (2 * focal))
+  const fovDeg = (2 * Math.atan(36 / (2 * params.focalLength)) * (180 / Math.PI)).toFixed(1);
+
   return (
     <div className="h-full flex flex-col p-6 bg-slate-800/50 overflow-y-auto">
       <div className="flex items-center gap-2 mb-6 text-indigo-400">
@@ -139,15 +147,16 @@ export const Controls: React.FC<ControlsProps> = ({
           />
 
           <Slider
-            label="相机焦距 / FOV"
+            label="相机焦距 (FOV)"
             value={params.focalLength}
             min={15}
             max={200}
             step={1}
             unit="mm"
             onChange={(v) => updateParam('focalLength', v)}
+            extraInfo={`~${fovDeg}°`}
             tooltipTitle="焦距与视场角 (Focal Length & FOV)"
-            tooltipContent="调节焦距会直接改变视场角 (FOV)。焦距越小（广角），FOV 越大，能看到的范围越广；焦距越大（长焦），FOV 越小，视野越窄。开启‘显示视场’可在上帝视角中观察变化。"
+            tooltipContent={`当前焦距 ${params.focalLength}mm 对应约 ${fovDeg}° 的水平视场角。调节此参数可模拟不同人眼的视野范围。在上帝视角开启‘显示视场’可直观看到视锥变化。`}
           />
         </div>
 
